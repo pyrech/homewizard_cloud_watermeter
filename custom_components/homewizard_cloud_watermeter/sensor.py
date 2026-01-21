@@ -58,29 +58,28 @@ class HomeWizardCloudWaterSensor(CoordinatorEntity, SensorEntity):
     @property
     def native_value(self):
         """Return the state of the sensor as a float."""
-        if not self.coordinator.data:
+        if not self.coordinator.data or self._type not in self.coordinator.data:
             return None
 
-        for item in self.coordinator.data:
-            if item["type"] == self._type:
-                # Get the raw string value (e.g. "1.234" or "1 234,50")
-                raw_value = str(item.get("displayValue", "0"))
-                try:
-                    # Remove spaces and normalize decimal separator
-                    clean_value = raw_value.replace(" ", "").replace(",", ".")
-                    return float(clean_value)
-                except ValueError:
-                    _LOGGER.warning("Could not convert value '%s' to float", raw_value)
-                    return None
-        return None
+        item = self.coordinator.data[self._type]
+        # Get the raw string value (e.g. "1.234" or "1 234,50")
+        raw_value = str(item.get("displayValue", "0"))
+        try:
+            # Remove spaces and normalize decimal separator
+            clean_value = raw_value.replace(" ", "").replace(",", ".")
+            return float(clean_value)
+        except ValueError:
+            _LOGGER.warning("Could not convert value '%s' to float", raw_value)
+            return None
 
     @property
     def native_unit_of_measurement(self):
         """Return the unit of measurement normalized for HA."""
-        for item in self.coordinator.data:
-            if item["type"] == self._type:
-                unit = item.get("displayUnit")
-                if unit == "m3":
-                    return "m³"
-                return unit
-        return None
+        if not self.coordinator.data or self._type not in self.coordinator.data:
+            return None
+
+        item = self.coordinator.data[self._type]
+        unit = item.get("displayUnit")
+        if unit == "m3":
+            return "m³"
+        return unit
