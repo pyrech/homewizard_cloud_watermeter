@@ -64,14 +64,7 @@ class HomeWizardCloudApi:
                 "homeId": home_id
             },
             "query": (
-                "query DeviceList($homeId: Int!) {"
-                "home(id: $homeId) {"
-                "devices {"
-                "__typename identifier name ... on CloudDevice { __typename ...CloudDevice } ... on IntegrationDevice { graphType } ...ErrorCheckableDevice"
-                "} } }"
-                "fragment CloudDeviceType on CloudDevice { type }"
-                "fragment CloudDevice on CloudDevice { __typename ...CloudDeviceType model }"
-                "fragment ErrorCheckableDevice on Device { __typename identifier onlineState ... on CloudDevice { statusMessages { isError } } ... on InverterDevice { platform } }"
+                "query DeviceList($homeId: Int!) {home(id: $homeId) { devices { identifier name wifiStrength ... on CloudDevice { type model hardwareVersion onlineState }}}}"
             )
         }
 
