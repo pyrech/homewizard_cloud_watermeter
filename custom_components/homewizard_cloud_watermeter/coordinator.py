@@ -36,7 +36,7 @@ class HomeWizardCloudDataUpdateCoordinator(DataUpdateCoordinator):
         now = dt_util.now()
         yesterday = now - timedelta(days=1)
 
-        data = []
+        data = {}
 
         # Find watermeter devices and fetch their data
         for device in devices:
@@ -83,7 +83,7 @@ class HomeWizardCloudDataUpdateCoordinator(DataUpdateCoordinator):
                 for v in stats_today.get("values", [])
             )
 
-            data.append({
+            data[device['sanitized_identifier']] = ({
                 "daily_total": daily_total,
                 "unit": UnitOfVolume.LITERS,
                 "device": device,
@@ -99,21 +99,29 @@ class HomeWizardCloudDataUpdateCoordinator(DataUpdateCoordinator):
         last_stats = await self.hass.async_add_executor_job(
             get_last_statistics, self.hass, 1, statistic_id, True, {"sum"}
         )
+
         last_sum = 0.0
         last_stat_time = None
 
         if statistic_id in last_stats and last_stats[statistic_id]:
-            last_sum = last_stats[statistic_id][0]["sum"]
-            # Ensure we have a timezone-aware datetime for comparison
-            last_stat_time = dt_util.as_utc(last_stats[statistic_id][0]["start"])
+            point = last_stats[statistic_id][0]
+            last_sum = point.get("sum") or 0.0
+
+            raw_start = point.get("start")
+            if raw_start is not None:
+                if isinstance(raw_start, (int, float)):
+                    last_stat_time = dt_util.utc_from_timestamp(raw_start)
+                else:
+                    last_stat_time = dt_util.as_utc(raw_start)
 
         metadata = StatisticMetaData(
             has_mean=False,
             has_sum=True,
-            name=f"{device.get('name')} Total Usage",
+            name=f"{device.get('name')} Total",
             source=DOMAIN,
             statistic_id=statistic_id,
             unit_of_measurement=UnitOfVolume.LITERS,
+            mean_type="arithmetic",
         )
 
         hourly_data = {}
@@ -147,6 +155,11 @@ class HomeWizardCloudDataUpdateCoordinator(DataUpdateCoordinator):
                 continue
 
             usage = hourly_data[hour]
+
+            # Ignore hours without water usage
+            if usage == 0:
+                continue
+
             cumulative_sum += usage
 
             stat_data.append(
