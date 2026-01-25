@@ -60,7 +60,13 @@ class HomeWizardCloudDataUpdateCoordinator(DataUpdateCoordinator):
 
             values = tsdb_data.get("values", [])
 
-            await self.async_inject_cleaned_stats(values, device)
+            if "recorder" in self.hass.config.components:
+                try:
+                    await self.async_inject_cleaned_stats(values, device)
+                except Exception as err:
+                    _LOGGER.error("Failed to inject statistics: %s", err)
+            else:
+                _LOGGER.debug("Recorder not loaded, skipping statistics injection")
 
             daily_total = sum(
                 float(v.get("water") or 0)
