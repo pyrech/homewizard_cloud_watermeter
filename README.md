@@ -1,45 +1,88 @@
-# HomeWizard Cloud Watermeter Integration for Home Assistant
+# HomeWizard Cloud Watermeter
+[![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg?style=for-the-badge)](https://github.com/hacs/integration)
+![Home Assistant](https://img.shields.io/badge/home--assistant-2024.1+-blue.svg?style=for-the-badge&logo=home-assistant)
+![License](https://img.shields.io/badge/license-MIT-green.svg?style=for-the-badge)
 
-This is a custom integration for Home Assistant that allows you to retrieve daily consumption data from your HomeWizard watermeter devices via the HomeWizard Cloud API.
+A custom Home Assistant integration to track your water consumption via the **HomeWizard Cloud**, designed specifically for their [battery-powered watermeter devices](https://www.homewizard.com/watermeter/).
 
-## Overview
+> [!IMPORTANT]
+> **TL;DR: Do you need this?**
+> - :zap: **Don't have a Watermeter?** This is only for the Watermeter. Other HomeWizard devices work perfectly with the official integration.
+> - :battery: **Running on Battery?** Yes, you need **this** integration.
+> - :electric_plug: **Running on USB?** No, stop here! Use the [official HomeWizard Energy integration](https://www.home-assistant.io/integrations/homewizard/) for real-time local data.
+---
 
-The official [HomeWizard Energy](https://www.home-assistant.io/integrations/homewizard/) integration for Home Assistant provides excellent real-time data using a local API. However, for the **HomeWizard Watermeter**, this local API is only active when the device is powered by its USB port.
+## Why this integration?
 
-When the Watermeter runs on batteries, it disables the local API to conserve power. Instead, it takes four readings per day and uploads them to the HomeWizard cloud. This integration was created to bridge that gap, fetching those daily totals from the cloud and bringing them into Home Assistant.
+The official [HomeWizard Energy](https://www.home-assistant.io/integrations/homewizard/) integration is amazing but has a limitation: it requires the **Local API**, which is disabled when the Watermeter runs on **batteries**.
 
-## Who is this for?
-
-This integration is specifically for users who:
-- Own a HomeWizard Watermeter.
-- Run it on **battery power** (and thus cannot use the local API).
-- Want to integrate their daily water consumption data into Home Assistant.
-
-If you power your Watermeter via USB, you should use the official **HomeWizard** integration for real-time data.
-
-## Installation
-
-The recommended way to install this integration is through the [Home Assistant Community Store (HACS)](https://hacs.xyz/).
-
-1.  Go to HACS > Integrations.
-2.  Click the three dots in the top right and select "Custom repositories".
-3.  Add the URL to this repository and select "Integration" as the category.
-4.  Find "HomeWizard Cloud Watermeter" in the list and click "Install".
-5.  Restart Home Assistant.
-
-## Configuration
-
-1.  Go to **Settings > Devices & Services**.
-2.  Click **Add Integration** and search for "HomeWizard Cloud Watermeter".
-3.  Enter your HomeWizard account email and password. These are the same credentials you use for the mobile app.
-4.  If you have multiple homes configured in your account, select the correct location from the list of the second step.
-5.  The integration will automatically discover your HomeWizard watermeter devices and create corresponding devices and sensor entities in Home Assistant.
-6.  If you want to monitore your water usage, you can add the entity named "<Name of your Watermeter> Total Usage" to the water usage section of the Energy dashboard configuration.
-
-## Important Notes
-
-This integration relies on the HomeWizard Cloud. It is not real-time and will only update a few times a day, corresponding to when the battery-powered device uploads its data.
+**This integration bridges the gap:**
+- :white_check_mark: Fetches data from the HomeWizard Cloud.
+- :white_check_mark: Perfect for battery-powered setups (4 updates/day).
+- :white_check_mark: High-resolution historical data (5-min intervals) injected into Long Term Statistics.
+- :white_check_mark: Full Energy Dashboard support.
 
 ---
 
-*This is an unofficial integration and is not affiliated with HomeWizard.*
+## Features
+
+- **Device Support:** Automatically discovers all watermeter devices linked to your account.
+- **Smart Tracking:** High-resolution consumption data (not just daily totals).
+- **Diagnostics:** Monitor Online status and Wi-Fi signal strength.
+- **Energy Dashboard:** Native integration with the Home Assistant Energy panel.
+- **Auto-Sync:** Fetches the last 48h of data to ensure no drops, even if your Wi-Fi is flaky.
+
+---
+
+## Installation
+
+### Option 1: HACS (Recommended)
+
+The recommended way to install this integration is through the [Home Assistant Community Store (HACS)](https://hacs.xyz/).
+
+1. Open **HACS** > **Integrations**.
+2. Click the three dots in the top right and select **Custom repositories**.
+3. Paste: `https://github.com/pyrech/homewizard_cloud_watermeter`
+4. Select **Integration** as the category and click **Add**.
+5. Find **HomeWizard Cloud Watermeter** and click **Install**.
+6. **Restart** Home Assistant.
+
+### Option 2: Manual
+Copy the `custom_components/homewizard_cloud_watermeter` folder into your `config/custom_components` directory and restart.
+
+---
+
+## Setup
+
+1. Go to **Settings > Devices & Services**.
+2. Click **Add Integration** and search for `HomeWizard Cloud Watermeter`.
+3. Log in with your HomeWizard credentials.
+5. **Energy Dashboard:** For the best experience, add the `Total Usage` entity to the Water consumption section.
+
+> [!TIP]
+> Use the entity ending in `_total` for the Energy Dashboard. It provides the best resolution for your daily/weekly charts!
+
+---
+
+## Sensors provided
+
+| Sensor | Enabled by default | Description |
+| :--- | :--- | :--- |
+| **Daily Usage** | true | Water usage of today (L) |
+| **Total Usage** | true when recorder is enabled | Water usage history (L) |
+| **Wi-Fi Signal** | false | Wifi signal strength (%) |
+| **Online State** | false | Whether the device was online recently or not |
+
+---
+
+## Community & Support
+
+- **Found a bug?** Please open an [Issue](https://github.com/pyrech/homewizard_cloud_watermeter/issues).
+- **Want to contribute?** Pull Requests are welcome!
+- **Official Recognition:** While this is a community project, **HomeWizard** is aware of this integration and won't block it (see [Issue #2](https://github.com/pyrech/homewizard_cloud_watermeter/issues/2)).
+
+---
+
+## :warning: Disclaimer
+
+*This is an unofficial community-driven integration. It is not affiliated with, authorized, or endorsed by HomeWizard.*
