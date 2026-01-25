@@ -1,6 +1,7 @@
 from datetime import timedelta, datetime
 import logging
 
+from homeassistant.components.recorder import get_instance
 from homeassistant.components.recorder.models import StatisticData, StatisticMetaData
 from homeassistant.components.recorder.statistics import async_add_external_statistics, get_last_statistics
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
@@ -96,7 +97,7 @@ class HomeWizardCloudDataUpdateCoordinator(DataUpdateCoordinator):
         statistic_id = f"{DOMAIN}:{device['sanitized_identifier']}_total"
 
         # Get the absolute last point in history to ensure continuity
-        last_stats = await self.hass.async_add_executor_job(
+        last_stats = await get_instance(self.hass).async_add_executor_job(
             get_last_statistics, self.hass, 1, statistic_id, True, {"sum"}
         )
 
