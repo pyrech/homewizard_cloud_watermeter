@@ -32,10 +32,10 @@ class HomeWizardCloudApi:
                         # We subtract 60 seconds as a safety margin
                         expires_in = data.get("expires_in", 3600)
                         self._token_expires_at = time.time() + expires_in - 60
-                        _LOGGER.debug("Successfully authenticated. Token expires in %s s", expires_in)
+                        _LOGGER.debug("Successfully authenticated to HomeWizard API. Token expires in %s s", expires_in)
                         return True
 
-                    _LOGGER.error("Authentication failed with status: %s", response.status)
+                    _LOGGER.error("Failed to authenticate to HomeWizard API, got HTTP error: %s", response.status)
                     return False
         except Exception as ex:
             _LOGGER.error("Error connecting to HomeWizard API: %s", ex)
@@ -51,10 +51,10 @@ class HomeWizardCloudApi:
                     async with self._session.get(url, headers=headers) as response:
                         if response.status == 200:
                             return await response.json()
-                        _LOGGER.error("Failed to fetch locations: %s", response.status)
+                        _LOGGER.error("Failed to fetch HomeWizard locations: %s", response.status)
                         return []
             except Exception as ex:
-                _LOGGER.error("Error fetching locations: %s", ex)
+                _LOGGER.error("Error fetching HomeWizard locations: %s", ex)
                 return []
 
     async def async_get_devices(self, home_id: int) -> dict:
@@ -97,10 +97,10 @@ class HomeWizardCloudApi:
                 async with self._session.post(url, json=payload, headers=headers) as response:
                     if response.status == 200:
                         return await response.json()
-                    _LOGGER.error("TSDB request failed: %s, %s", response.status, await response.text())
+                    _LOGGER.error("Failed to fetch HomeWizard data: %s", response.status)
                     return None
         except Exception as ex:
-            _LOGGER.error("Error during TSDB request: %s", ex)
+            _LOGGER.error("Error fetching HomeWizard data: %s", ex)
             return None
 
     async def call_graphql(self, payload: dict, ) -> dict:
@@ -113,10 +113,10 @@ class HomeWizardCloudApi:
                 async with self._session.post(url, json=payload, headers=headers) as response:
                     if response.status == 200:
                         return await response.json()
-                    _LOGGER.error("GraphQL request failed: %s", response.status)
+                    _LOGGER.error("Failed to fetch HomeWizard data: %s", response.status)
                     return None
         except Exception as ex:
-            _LOGGER.error("Error during GraphQL request: %s", ex)
+            _LOGGER.error("Error fetching HomeWizard data: %s", ex)
             return None
 
     async def get_headers(self) -> dict:
@@ -131,6 +131,6 @@ class HomeWizardCloudApi:
     async def async_ensure_token(self) -> str:
         """Check if token is valid and renew it if necessary."""
         if not self._token or time.time() > self._token_expires_at:
-            _LOGGER.debug("Token expired or missing, renewing...")
+            _LOGGER.debug("HomeWizard access token expired or missing, renewing...")
             await self.async_authenticate()
         return self._token

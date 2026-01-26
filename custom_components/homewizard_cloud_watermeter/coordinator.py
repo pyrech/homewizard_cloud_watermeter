@@ -30,14 +30,11 @@ class HomeWizardCloudDataUpdateCoordinator(DataUpdateCoordinator):
         )
 
     async def _async_update_data(self):
-        try:
-            devices_data = await self.api.async_get_devices(self.home_id)
-            if not devices_data or "errors" in devices_data:
-                raise UpdateFailed(f"Error fetching devices: {devices_data.get('errors')}")
+        devices_data = await self.api.async_get_devices(self.home_id)
+        if not devices_data or "errors" in devices_data:
+            raise UpdateFailed(f"Error fetching HomeWizard devices: {devices_data.get('errors')}")
 
-            devices = devices_data.get("data", {}).get("home", {}).get("devices", [])
-        except Exception as err:
-            raise UpdateFailed(f"Error communicating with API: {err}")
+        devices = devices_data.get("data", {}).get("home", {}).get("devices", [])
 
         now = dt_util.now()
         yesterday = now - timedelta(days=1)
@@ -49,40 +46,34 @@ class HomeWizardCloudDataUpdateCoordinator(DataUpdateCoordinator):
             if device.get("type") != "watermeter":
                 continue
 
-            _LOGGER.debug("Found watermeter, fetching TSDB data.")
+            _LOGGER.debug("Found HomeWizard watermeter device '%s', fetching data.", device["identifier"])
 
             # Sanitize the identifier for Home Assistant's use
             # This will be used for statistic_id, unique_id, and device_id
             device['sanitized_identifier'] = device["identifier"].replace('/', '_')
 
             # Retrieve device data
-            try:
-                stats_today = await self.api.async_get_tsdb_data(now, self.hass.config.time_zone, device["identifier"])
-            except Exception as err:
-                raise UpdateFailed(f"Error communicating with API: {err}")
+            stats_today = await self.api.async_get_tsdb_data(now, self.hass.config.time_zone, device["identifier"])
 
             if not stats_today or "values" not in stats_today:
                 _LOGGER.warning("No data received for watermeter device.")
                 continue
 
             if "recorder" in self.hass.config.components:
-                try:
-                    stats_yesterday = await self.api.async_get_tsdb_data(yesterday, self.hass.config.time_zone, device["identifier"])
-                except Exception as err:
-                    raise UpdateFailed(f"Error communicating with API: {err}")
+                stats_yesterday = await self.api.async_get_tsdb_data(yesterday, self.hass.config.time_zone, device["identifier"])
 
                 if not stats_yesterday or not stats_yesterday or "values" not in stats_today or "values" not in stats_yesterday:
                     _LOGGER.warning("No yesterday data received for watermeter device.")
                     continue
-                else:
-                    combined_values = stats_yesterday.get("values", []) + stats_today.get("values", [])
 
-                    try:
-                        await self.async_inject_cleaned_stats(combined_values, device)
-                    except Exception as err:
-                        _LOGGER.error("Failed to inject statistics: %s", err)
+                combined_values = stats_yesterday.get("values", []) + stats_today.get("values", [])
+
+                try:
+                    await self.async_inject_cleaned_stats(combined_values, device)
+                except Exception as err:
+                    _LOGGER.error("Failed to inject HomeWizard statistics: %s", err)
             else:
-                _LOGGER.debug("Recorder not loaded, skipping statistics injection")
+                _LOGGER.debug("Recorder not loaded, skipping HomeWizard statistics injection")
 
             daily_total = sum(
                 float(v.get("water") or 0)
