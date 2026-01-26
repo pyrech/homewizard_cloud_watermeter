@@ -112,7 +112,6 @@ class HomeWizardCloudDataUpdateCoordinator(DataUpdateCoordinator):
                     last_stat_time = dt_util.as_utc(raw_start)
 
         metadata = StatisticMetaData(
-            has_mean=False,
             has_sum=True,
             name=f"{device.get('name')} Total",
             source=DOMAIN,

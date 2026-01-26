@@ -1,6 +1,6 @@
 # HomeWizard Cloud Watermeter
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg?style=for-the-badge)](https://github.com/hacs/integration)
-![Home Assistant](https://img.shields.io/badge/home--assistant-2024.1+-blue.svg?style=for-the-badge&logo=home-assistant)
+![Home Assistant](https://img.shields.io/badge/home--assistant-2025.11+-blue.svg?style=for-the-badge&logo=home-assistant)
 ![License](https://img.shields.io/badge/license-MIT-green.svg?style=for-the-badge)
 
 A custom Home Assistant integration to track your water consumption via the **HomeWizard Cloud**, designed specifically for their [battery-powered watermeter devices](https://www.homewizard.com/watermeter/).
