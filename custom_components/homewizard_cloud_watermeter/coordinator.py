@@ -58,20 +58,19 @@ class HomeWizardCloudDataUpdateCoordinator(DataUpdateCoordinator):
 
             # Retrieve device data
             stats_today = await self.api.async_get_tsdb_data(now, self.hass.config.time_zone, device["identifier"])
+            stats_yesterday = await self.api.async_get_tsdb_data(yesterday, self.hass.config.time_zone, device["identifier"])
 
             if not stats_today or "values" not in stats_today:
                 _LOGGER.warning("No data received for watermeter device.")
                 continue
 
+            if not stats_yesterday or not stats_yesterday or "values" not in stats_today or "values" not in stats_yesterday:
+                _LOGGER.warning("No yesterday data received for watermeter device.")
+                continue
+
+            combined_values = stats_yesterday.get("values", []) + stats_today.get("values", [])
+
             if "recorder" in self.hass.config.components:
-                stats_yesterday = await self.api.async_get_tsdb_data(yesterday, self.hass.config.time_zone, device["identifier"])
-
-                if not stats_yesterday or not stats_yesterday or "values" not in stats_today or "values" not in stats_yesterday:
-                    _LOGGER.warning("No yesterday data received for watermeter device.")
-                    continue
-
-                combined_values = stats_yesterday.get("values", []) + stats_today.get("values", [])
-
                 try:
                     await self.async_inject_cleaned_stats(combined_values, device)
                 except Exception as err:
@@ -84,10 +83,18 @@ class HomeWizardCloudDataUpdateCoordinator(DataUpdateCoordinator):
                 for v in stats_today.get("values", [])
             )
 
+            last_sync_at = None
+
+            for entry in reversed(combined_values):
+                if entry.get("water") is not None:
+                    last_sync_at = dt_util.parse_datetime(entry["time"])
+                    break
+
             data[device['sanitized_identifier']] = ({
                 "daily_total": daily_total,
                 "unit": UnitOfVolume.LITERS,
                 "device": device,
+                "last_sync_at": last_sync_at,
             })
 
         return data

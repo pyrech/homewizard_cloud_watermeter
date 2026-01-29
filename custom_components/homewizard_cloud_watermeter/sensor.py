@@ -24,6 +24,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
     # Create a sensor for each homewizard device
     for value in coordinator.data.values():
         entities.append(HomeWizardDailyTotalSensor(coordinator, value))
+        entities.append(HomeWizardLastSyncSensor(coordinator, value))
         entities.append(HomeWizardWifiSensor(coordinator, value))
         entities.append(HomeWizardOnlineSensor(coordinator, value))
 
@@ -91,6 +92,21 @@ class HomeWizardDailyTotalSensor(HomeWizardBaseSensor, SensorEntity):
         return {
             "statistic_id": f"{DOMAIN}:{self._sanitized_identifier}_total"
         }
+
+class HomeWizardLastSyncSensor(HomeWizardBaseSensor, SensorEntity):
+    def __init__(self, coordinator, data):
+        super().__init__(coordinator, data)
+
+        self._attr_name = "Last Device Synchronization"
+        self._attr_unique_id = f"{self._sanitized_identifier}_last_sync"
+        self._attr_device_class = SensorDeviceClass.TIMESTAMP
+        self._attr_entity_category = EntityCategory.DIAGNOSTIC
+        self._attr_icon = "mdi:cloud-check"
+        self._attr_entity_registry_enabled_default = False
+
+    @property
+    def native_value(self):
+        return self.coordinator.data.get(self._sanitized_identifier)["last_sync_at"]
 
 class HomeWizardWifiSensor(HomeWizardBaseSensor, SensorEntity):
     def __init__(self, coordinator, data):

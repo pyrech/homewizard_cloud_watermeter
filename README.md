@@ -70,6 +70,7 @@ Copy the `custom_components/homewizard_cloud_watermeter` folder into your `confi
 | :--- | :--- | :--- |
 | **Daily Usage** | true | Water usage of today (L) |
 | **Total Usage** | true when recorder is enabled | Water usage history (L) |
+| **Last Device Synchronization** | true | Last time the device pushed its data to the cloud (L) |
 | **Wi-Fi Signal** | false | Wifi signal strength (%) |
 | **Online State** | false | Whether the device was online recently or not |
 
