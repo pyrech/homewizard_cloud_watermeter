@@ -54,10 +54,12 @@ class HomeWizardBaseSensor(CoordinatorEntity):
 
         return {
             "identifiers": {(DOMAIN, self._sanitized_identifier)},
-            "name": device.get("name", "HomeWizard Watermeter"),
+            "name": device.get("name", "Watermeter"),
             "manufacturer": "HomeWizard",
-            "model": device.get("model"),
+            "model": "Watermeter",
+            "model_id": device.get("model"),
             "hw_version": device.get("hardwareVersion"),
+            "sw_version": device.get("version"),
         }
 
 class HomeWizardDailyTotalSensor(HomeWizardBaseSensor, SensorEntity):
@@ -97,12 +99,11 @@ class HomeWizardLastSyncSensor(HomeWizardBaseSensor, SensorEntity):
     def __init__(self, coordinator, data):
         super().__init__(coordinator, data)
 
-        self._attr_name = "Last Device Synchronization"
+        self._attr_name = "Last Device Sync"
         self._attr_unique_id = f"{self._sanitized_identifier}_last_sync"
         self._attr_device_class = SensorDeviceClass.TIMESTAMP
         self._attr_entity_category = EntityCategory.DIAGNOSTIC
         self._attr_icon = "mdi:cloud-check"
-        self._attr_entity_registry_enabled_default = False
 
     @property
     def native_value(self):

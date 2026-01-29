@@ -65,7 +65,7 @@ class HomeWizardCloudApi:
                 "homeId": home_id
             },
             "query": (
-                "query DeviceList($homeId: Int!) {home(id: $homeId) { devices { identifier name wifiStrength ... on CloudDevice { type model hardwareVersion onlineState }}}}"
+                "query DeviceList($homeId: Int!) {home(id: $homeId) { devices { identifier name wifiStrength ... on CloudDevice { type model hardwareVersion version onlineState }}}}"
             )
         }
 
