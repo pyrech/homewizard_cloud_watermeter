@@ -79,7 +79,7 @@ class HomeWizardDailyTotalSensor(HomeWizardBaseSensor, SensorEntity):
         """Return the state of the sensor as a float."""
         daily_total = self.coordinator.data.get(self._sanitized_identifier)["daily_total"]
 
-        if not daily_total:
+        if daily_total is None:
             return None
 
         try:
