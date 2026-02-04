@@ -64,7 +64,7 @@ class HomeWizardCloudDataUpdateCoordinator(DataUpdateCoordinator):
                 _LOGGER.warning("No data received for watermeter device.")
                 continue
 
-            if not stats_yesterday or not stats_yesterday or "values" not in stats_today or "values" not in stats_yesterday:
+            if not stats_yesterday or "values" not in stats_today or "values" not in stats_yesterday:
                 _LOGGER.warning("No yesterday data received for watermeter device.")
                 continue
 
