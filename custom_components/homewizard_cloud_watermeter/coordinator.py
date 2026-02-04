@@ -54,7 +54,7 @@ class HomeWizardCloudDataUpdateCoordinator(DataUpdateCoordinator):
 
             # Sanitize the identifier for Home Assistant's use
             # This will be used for statistic_id, unique_id, and device_id
-            device['sanitized_identifier'] = device["identifier"].replace('/', '_')
+            device["sanitized_identifier"] = device["identifier"].replace('/', '_')
 
             # Retrieve device data
             stats_today = await self.api.async_get_tsdb_data(now, self.hass.config.time_zone, device["identifier"])
@@ -163,10 +163,6 @@ class HomeWizardCloudDataUpdateCoordinator(DataUpdateCoordinator):
                 continue
 
             usage = hourly_data[hour]
-
-            # Ignore hours without water usage
-            if usage == 0:
-                continue
 
             cumulative_sum += usage
 
