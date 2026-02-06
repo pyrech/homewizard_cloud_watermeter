@@ -7,7 +7,7 @@ from homeassistant.components.recorder.models import (
     StatisticMetaData,
     StatisticMeanType,
 )
-from homeassistant.components.recorder.statistics import async_add_external_statistics, get_last_statistics
+from homeassistant.components.recorder.statistics import async_add_external_statistics, get_last_statistics, statistics_during_period
 from homeassistant.components.sensor import SensorDeviceClass
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.util import dt as dt_util
@@ -15,6 +15,9 @@ from homeassistant.const import UnitOfVolume
 
 from .const import DOMAIN
 from .api import HomeWizardCloudApi
+
+# Period during which we recalculate statistics to catch late cloud data
+RECALCULATION_PERIOD = timedelta(hours=48)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -78,10 +81,24 @@ class HomeWizardCloudDataUpdateCoordinator(DataUpdateCoordinator):
             else:
                 _LOGGER.debug("Recorder not loaded, skipping HomeWizard statistics injection")
 
-            daily_total = sum(
-                float(v.get("water") or 0)
-                for v in stats_today.get("values", [])
-            )
+            # Calculate daily total only from non-null values
+            today_values = [
+                v for v in stats_today.get("values", [])
+                if v.get("water") is not None
+            ]
+            
+            # Return None if no data available yet (sensor will show "Unknown")
+            # This avoids showing 0 when data simply hasn't arrived from the cloud
+            if not today_values:
+                daily_total = None
+                _LOGGER.debug("No data available yet for today, daily_total = None")
+            else:
+                daily_total = sum(float(v.get("water") or 0) for v in today_values)
+                _LOGGER.debug(
+                    "Daily total calculation: %d entries with data, total = %.1f L",
+                    len(today_values),
+                    daily_total
+                )
 
             last_sync_at = None
 
@@ -89,6 +106,9 @@ class HomeWizardCloudDataUpdateCoordinator(DataUpdateCoordinator):
                 if entry.get("water") is not None:
                     last_sync_at = dt_util.parse_datetime(entry["time"])
                     break
+            
+            if last_sync_at:
+                _LOGGER.debug("Last cloud sync at: %s", last_sync_at.isoformat())
 
             data[device['sanitized_identifier']] = ({
                 "daily_total": daily_total,
@@ -100,10 +120,41 @@ class HomeWizardCloudDataUpdateCoordinator(DataUpdateCoordinator):
         return data
 
     async def async_inject_cleaned_stats(self, values: list, device: dict):
-        """Clean data and inject into HA statistics with daily block handling."""
+        """Clean data and inject into HA statistics, adding only missing hours.
+        
+        The cloud sync happens ~4 times per day and data may arrive with delay.
+        We check the last 48 hours and only inject hours that are missing.
+        """
         statistic_id = f"{DOMAIN}:{device['sanitized_identifier']}_total"
-
-        # Get the absolute last point in history to ensure continuity
+        
+        now = dt_util.now()
+        check_period_start = now - RECALCULATION_PERIOD
+        
+        # Get existing statistics for the check period
+        existing_stats = await get_instance(self.hass).async_add_executor_job(
+            statistics_during_period,
+            self.hass,
+            check_period_start,
+            now,
+            {statistic_id},
+            "hour",
+            None,
+            {"state", "sum"}
+        )
+        
+        # Build a map of existing hourly values: hour_utc -> state
+        existing_hourly = {}
+        if statistic_id in existing_stats and existing_stats[statistic_id]:
+            for point in existing_stats[statistic_id]:
+                raw_start = point.get("start")
+                if raw_start is not None:
+                    if isinstance(raw_start, (int, float)):
+                        hour_utc = dt_util.utc_from_timestamp(raw_start)
+                    else:
+                        hour_utc = dt_util.as_utc(raw_start)
+                    existing_hourly[hour_utc] = point.get("state") or 0.0
+        
+        # Get the last known statistics point to continue the sum
         last_stats = await get_instance(self.hass).async_add_executor_job(
             get_last_statistics, self.hass, 1, statistic_id, True, {"sum"}
         )
@@ -132,6 +183,7 @@ class HomeWizardCloudDataUpdateCoordinator(DataUpdateCoordinator):
             mean_type=StatisticMeanType.NONE,
         )
 
+        # Aggregate cloud data by hour
         hourly_data = {}
         for entry in values:
             # Ignore nulls (mainly future hours)
@@ -152,27 +204,81 @@ class HomeWizardCloudDataUpdateCoordinator(DataUpdateCoordinator):
                 hourly_data[hour_timestamp] = 0.0
             hourly_data[hour_timestamp] += float(entry["water"])
 
-        # Build statistics starting from the last known sum
+        # Find hours that are missing in existing statistics
+        hours_to_add = []
+        for hour, cloud_value in hourly_data.items():
+            hour_utc = dt_util.as_utc(hour)
+            
+            # Only add if missing from existing statistics
+            if hour_utc not in existing_hourly:
+                hours_to_add.append(hour)
+        
+        if not hours_to_add:
+            _LOGGER.debug("All statistics are up to date, nothing to inject")
+            return
+        
+        _LOGGER.debug("Found %d missing hours to add", len(hours_to_add))
+        
+        # We need to recalculate sum from the first missing hour
+        first_hour_to_add = min(hours_to_add)
+        first_hour_utc = dt_util.as_utc(first_hour_to_add)
+        
+        # Get the sum just before the first hour to add
+        stats_before_first = await get_instance(self.hass).async_add_executor_job(
+            statistics_during_period,
+            self.hass,
+            first_hour_utc - timedelta(hours=2),
+            first_hour_utc,
+            {statistic_id},
+            "hour",
+            None,
+            {"sum"}
+        )
+        
+        base_sum = 0.0
+        base_stat_time = None
+        
+        if statistic_id in stats_before_first and stats_before_first[statistic_id]:
+            point = stats_before_first[statistic_id][-1]
+            base_sum = point.get("sum") or 0.0
+            raw_start = point.get("start")
+            if raw_start is not None:
+                if isinstance(raw_start, (int, float)):
+                    base_stat_time = dt_util.utc_from_timestamp(raw_start)
+                else:
+                    base_stat_time = dt_util.as_utc(raw_start)
+
+        # Build statistics from first_hour_to_add onwards
         stat_data = []
-        cumulative_sum = last_sum
+        cumulative_sum = base_sum
+        new_count = 0
 
         for hour in sorted(hourly_data.keys()):
             hour_utc = dt_util.as_utc(hour)
 
-            if last_stat_time and hour_utc <= last_stat_time:
+            # Skip hours before our base reference point
+            if base_stat_time and hour_utc <= base_stat_time:
                 continue
 
             usage = hourly_data[hour]
-
             cumulative_sum += usage
-
-            stat_data.append(
-                StatisticData(
-                    start=hour,
-                    state=usage,
-                    sum=cumulative_sum
+            
+            # Only include hours from first_hour_to_add onwards
+            if hour >= first_hour_to_add:
+                if hour in hours_to_add:
+                    new_count += 1
+                
+                stat_data.append(
+                    StatisticData(
+                        start=hour,
+                        state=usage,
+                        sum=cumulative_sum
+                    )
                 )
-            )
 
         if stat_data:
+            _LOGGER.debug(
+                "Injecting %d statistics (%d new), final sum=%.1f L",
+                len(stat_data), new_count, cumulative_sum
+            )
             async_add_external_statistics(self.hass, metadata, stat_data)
