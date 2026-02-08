@@ -57,10 +57,7 @@ Copy the `custom_components/homewizard_cloud_watermeter` folder into your `confi
 1. Go to **Settings > Devices & Services**.
 2. Click **Add Integration** and search for `HomeWizard Cloud Watermeter`.
 3. Log in with your HomeWizard credentials.
-5. **Energy Dashboard:** For the best experience, add the `Total Usage` entity to the Water consumption section.
-
-> [!TIP]
-> Use the entity ending in `_total` for the Energy Dashboard. It provides the best resolution for your daily/weekly charts!
+5. **Energy Dashboard:** In the Water consumption section, search for "homewizard" entities and select the one corresponding to your device.
 
 ---
 
