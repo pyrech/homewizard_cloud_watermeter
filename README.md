@@ -69,7 +69,7 @@ Copy the `custom_components/homewizard_cloud_watermeter` folder into your `confi
 | Sensor | Enabled by default | Description |
 | :--- | :--- | :--- |
 | **Total Usage** | true | Water usage history (L) |
-| **Last Device Synchronization** | true | Last time the device pushed its data to the cloud (L) |
+| **Last Device Sync** | true | Last time the device pushed its data to the cloud |
 | **Wi-Fi Signal** | false | Wifi signal strength (%) |
 | **Online State** | false | Whether the device was online recently or not |
 
