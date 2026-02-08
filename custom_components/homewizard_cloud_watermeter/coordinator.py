@@ -64,7 +64,7 @@ class HomeWizardCloudDataUpdateCoordinator(DataUpdateCoordinator):
                 _LOGGER.warning("No data received for watermeter device.")
                 continue
 
-            if not stats_yesterday or not stats_yesterday or "values" not in stats_today or "values" not in stats_yesterday:
+            if not stats_yesterday or "values" not in stats_yesterday:
                 _LOGGER.warning("No yesterday data received for watermeter device.")
                 continue
 
@@ -78,11 +78,6 @@ class HomeWizardCloudDataUpdateCoordinator(DataUpdateCoordinator):
             else:
                 _LOGGER.debug("Recorder not loaded, skipping HomeWizard statistics injection")
 
-            daily_total = sum(
-                float(v.get("water") or 0)
-                for v in stats_today.get("values", [])
-            )
-
             last_sync_at = None
 
             for entry in reversed(combined_values):
@@ -91,7 +86,6 @@ class HomeWizardCloudDataUpdateCoordinator(DataUpdateCoordinator):
                     break
 
             data[device['sanitized_identifier']] = ({
-                "daily_total": daily_total,
                 "unit": UnitOfVolume.LITERS,
                 "device": device,
                 "last_sync_at": last_sync_at,

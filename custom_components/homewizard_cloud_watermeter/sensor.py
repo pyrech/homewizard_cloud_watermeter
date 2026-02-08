@@ -3,7 +3,6 @@ from homeassistant.components.sensor import (
     EntityCategory,
     SensorDeviceClass,
     SensorEntity,
-    SensorStateClass,
 )
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.const import PERCENTAGE
@@ -23,7 +22,6 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
     # Create a sensor for each homewizard device
     for value in coordinator.data.values():
-        entities.append(HomeWizardDailyTotalSensor(coordinator, value))
         entities.append(HomeWizardLastSyncSensor(coordinator, value))
         entities.append(HomeWizardWifiSensor(coordinator, value))
         entities.append(HomeWizardOnlineSensor(coordinator, value))
@@ -60,39 +58,6 @@ class HomeWizardBaseSensor(CoordinatorEntity):
             "model_id": device.get("model"),
             "hw_version": device.get("hardwareVersion"),
             "sw_version": device.get("version"),
-        }
-
-class HomeWizardDailyTotalSensor(HomeWizardBaseSensor, SensorEntity):
-    def __init__(self, coordinator, data):
-        super().__init__(coordinator, data)
-
-        self._attr_name = "Daily usage"
-        self._attr_unique_id = f"{self._sanitized_identifier}_daily_total"
-        self._attr_device_class = SensorDeviceClass.WATER
-        self._attr_native_unit_of_measurement = data["unit"]
-
-        # Use TOTAL for daily values that reset at midnight
-        self._attr_state_class = SensorStateClass.TOTAL
-
-    @property
-    def native_value(self):
-        """Return the state of the sensor as a float."""
-        daily_total = self.coordinator.data.get(self._sanitized_identifier)["daily_total"]
-
-        if not daily_total:
-            return None
-
-        try:
-            return float(daily_total)
-        except ValueError:
-            _LOGGER.warning("Could not convert value '%s' to float", daily_total)
-            return None
-
-    @property
-    def extra_state_attributes(self):
-        """Return entity specific state attributes."""
-        return {
-            "statistic_id": f"{DOMAIN}:{self._sanitized_identifier}_total"
         }
 
 class HomeWizardLastSyncSensor(HomeWizardBaseSensor, SensorEntity):
