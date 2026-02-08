@@ -31,6 +31,10 @@ class HomeWizardCloudDataUpdateCoordinator(DataUpdateCoordinator):
         )
 
     async def _async_update_data(self):
+        if "recorder" not in self.hass.config.components:
+            _LOGGER.debug("Recorder not loaded, skipping update.")
+            return {}
+
         devices_data = await self.api.async_get_devices(self.home_id)
         if not devices_data:
             raise UpdateFailed(f"Error fetching HomeWizard devices.")
@@ -70,13 +74,7 @@ class HomeWizardCloudDataUpdateCoordinator(DataUpdateCoordinator):
 
             combined_values = stats_yesterday.get("values", []) + stats_today.get("values", [])
 
-            if "recorder" in self.hass.config.components:
-                try:
-                    await self.async_inject_cleaned_stats(combined_values, device)
-                except Exception as err:
-                    _LOGGER.error("Failed to inject HomeWizard statistics: %s", err)
-            else:
-                _LOGGER.debug("Recorder not loaded, skipping HomeWizard statistics injection")
+            total = await self.async_inject_cleaned_stats(combined_values, device)
 
             last_sync_at = None
 
@@ -86,6 +84,7 @@ class HomeWizardCloudDataUpdateCoordinator(DataUpdateCoordinator):
                     break
 
             data[device['sanitized_identifier']] = ({
+                "total": total,
                 "unit": UnitOfVolume.LITERS,
                 "device": device,
                 "last_sync_at": last_sync_at,
@@ -174,3 +173,5 @@ class HomeWizardCloudDataUpdateCoordinator(DataUpdateCoordinator):
 
         if stat_data:
             async_add_external_statistics(self.hass, metadata, stat_data)
+
+        return cumulative_sum

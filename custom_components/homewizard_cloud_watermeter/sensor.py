@@ -22,6 +22,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
     # Create a sensor for each homewizard device
     for value in coordinator.data.values():
+        entities.append(HomeWizardTotalSensor(coordinator, value))
         entities.append(HomeWizardLastSyncSensor(coordinator, value))
         entities.append(HomeWizardWifiSensor(coordinator, value))
         entities.append(HomeWizardOnlineSensor(coordinator, value))
@@ -59,6 +60,20 @@ class HomeWizardBaseSensor(CoordinatorEntity):
             "hw_version": device.get("hardwareVersion"),
             "sw_version": device.get("version"),
         }
+
+class HomeWizardTotalSensor(HomeWizardBaseSensor, SensorEntity):
+    def __init__(self, coordinator, data):
+        super().__init__(coordinator, data)
+
+        self._attr_name = "Total Usage"
+        self._attr_unique_id = f"{self._sanitized_identifier}_total"
+        self._attr_device_class = SensorDeviceClass.WATER
+        self._attr_native_unit_of_measurement = data["unit"]
+        self._attr_state_class = None
+
+    @property
+    def native_value(self):
+        return self.coordinator.data.get(self._sanitized_identifier)["total"]
 
 class HomeWizardLastSyncSensor(HomeWizardBaseSensor, SensorEntity):
     def __init__(self, coordinator, data):
